@@ -1,0 +1,246 @@
+.results {
+  padding: 4rem 1.5rem 6rem;
+  max-width: 700px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Paid banner ── */
+.paidBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: rgba(215,207,7,0.1);
+  border: 1px solid var(--lime);
+  padding: 1rem 1.25rem;
+  margin-bottom: 2.5rem;
+  font-size: 0.9rem;
+  color: var(--lime);
+  line-height: 1.55;
+}
+.paidBanner strong { color: var(--white); }
+
+/* ── Profile header ── */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.67rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lime);
+  margin-bottom: 0.85rem;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  line-height: 0.93;
+  margin-bottom: 0.75rem;
+}
+.name span { color: var(--lime); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--lime);
+  color: var(--lime);
+  background: rgba(215,207,7,0.07);
+  margin-bottom: 1.5rem;
+}
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  background: var(--lime);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.expertiseDesc {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+  margin-bottom: 2.5rem;
+}
+
+.streamsLabel {
+  font-family: var(--font-mono);
+  font-size: 0.67rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+/* ── Hook ── */
+.hook {
+  position: relative;
+  border: 1px solid var(--orange);
+  background: rgba(241,90,41,0.06);
+  padding: 1.75rem 1.5rem;
+  margin: 2rem 0;
+}
+
+.hookLabel {
+  position: absolute;
+  top: -0.6rem;
+  left: 1.25rem;
+  background: var(--black);
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--orange);
+  padding: 0 0.4rem;
+}
+
+.hookTitle {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  line-height: 1.05;
+  margin-bottom: 0.7rem;
+}
+
+.hookBody {
+  font-size: 0.93rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+.hookBody strong { color: var(--white); font-weight: 500; }
+
+/* ── $7 Upsell box ── */
+.upsell {
+  border: 2px solid var(--lime);
+  background: rgba(215,207,7,0.04);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.upsellPrice {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 12vw, 7rem);
+  line-height: 1;
+  color: var(--lime);
+  margin-bottom: 0.25rem;
+}
+
+.upsellMeta {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.upsellList {
+  list-style: none;
+  text-align: left;
+  display: inline-block;
+  margin-bottom: 1.75rem;
+}
+.upsellList li {
+  font-size: 0.92rem;
+  color: var(--text-dim);
+  padding: 0.3rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.upsellList li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--lime);
+  flex-shrink: 0;
+}
+
+/* ── Buttons ── */
+.btnOrange,
+.btnLime {
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 0.1em;
+  border: none;
+  padding: 1rem 2rem;
+  clip-path: var(--clip-btn);
+  transition: background 0.2s, transform 0.15s, color 0.2s;
+  display: block;
+  text-align: center;
+}
+
+.btnOrange {
+  background: var(--orange);
+  color: var(--white);
+}
+.btnOrange:hover {
+  background: var(--orange-hover);
+  transform: translateY(-2px);
+}
+
+.btnLime {
+  background: var(--lime);
+  color: var(--black);
+}
+.btnLime:hover {
+  background: var(--lime-light);
+  transform: translateY(-2px);
+}
+
+/* ── Post-paid CTA ── */
+.cta { margin-top: 2.5rem; }
+
+.ctaHook {
+  position: relative;
+  border: 1px solid var(--lime);
+  background: rgba(215,207,7,0.05);
+  padding: 1.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ctaHookLabel {
+  position: absolute;
+  top: -0.6rem;
+  left: 1.25rem;
+  background: var(--black);
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lime);
+  padding: 0 0.4rem;
+}
+
+.ctaTitle {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  line-height: 1.05;
+  margin-bottom: 0.7rem;
+}
+
+.ctaBody {
+  font-size: 0.93rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+.ctaBody strong { color: var(--white); font-weight: 500; }
+
+/* ── Calendar embed ── */
+.calendarWrap {
+  background: var(--surface);
+  border: 1px solid var(--surface2);
+  overflow: hidden;
+  min-height: 500px;
+}
+.calendarWrap iframe {
+  display: block;
+  width: 100%;
+  min-height: 620px;
+  border: none;
+}
