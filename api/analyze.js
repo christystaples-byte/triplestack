@@ -25,18 +25,12 @@ Your job is to:
    - Threat 2 (Package It): Turn expertise into a Product, System, Service, or Software
    - Threat 3 (Scale It): Use their reputation to create ongoing income
 
-For Threat 1 (Teach It) specifically, also provide:
-- 3 concrete action steps they can implement immediately to launch this income stream (each step should be 1-2 sentences, specific and actionable, not generic)
-- A conservative pricing breakdown showing exactly how they could earn money from this stream. Include:
-  - A specific price point (e.g. "$97 per workshop")
-  - A realistic quantity per month on the conservative end (e.g. "4 students")
-  - The resulting monthly income (e.g. "$388/month")
-  - One sentence on how to scale it from there
-
-For Threats 2 and 3, provide:
+For ALL THREE threats provide:
 - A short punchy title (4-7 words)
 - A 2-3 sentence description tailored to their specific profession
-- A realistic earning range (e.g. "$500–$2,000/month")
+- A realistic earning range (e.g. "$500-$2,000/month")
+- 3 concrete action steps they can implement immediately. Each step has a short title and 1-2 sentence detail that is specific and actionable, not generic
+- A conservative pricing breakdown with: a specific price point, a realistic monthly quantity, the resulting monthly total, and one sentence on how to scale
 
 Respond ONLY with valid JSON in this exact format — no markdown fences, no preamble, no trailing text:
 {
@@ -59,8 +53,38 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
         "scale": "..."
       }
     },
-    { "title": "...", "description": "...", "earning": "..." },
-    { "title": "...", "description": "...", "earning": "..." }
+    {
+      "title": "...",
+      "description": "...",
+      "earning": "...",
+      "steps": [
+        { "num": "01", "title": "...", "detail": "..." },
+        { "num": "02", "title": "...", "detail": "..." },
+        { "num": "03", "title": "...", "detail": "..." }
+      ],
+      "pricing": {
+        "price": "...",
+        "quantity": "...",
+        "monthly": "...",
+        "scale": "..."
+      }
+    },
+    {
+      "title": "...",
+      "description": "...",
+      "earning": "...",
+      "steps": [
+        { "num": "01", "title": "...", "detail": "..." },
+        { "num": "02", "title": "...", "detail": "..." },
+        { "num": "03", "title": "...", "detail": "..." }
+      ],
+      "pricing": {
+        "price": "...",
+        "quantity": "...",
+        "monthly": "...",
+        "scale": "..."
+      }
+    }
   ]
 }`;
 
@@ -74,7 +98,7 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
       },
       body: JSON.stringify({
         model:      'claude-sonnet-4-5',
-        max_tokens: 1500,
+        max_tokens: 2500,
         messages:   [{ role: 'user', content: prompt }],
       }),
     });
