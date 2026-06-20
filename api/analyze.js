@@ -1,9 +1,11 @@
+const GHL_WEBHOOK_URL = "https://services.leadconnectorhq.com/hooks/H0yigYI8phxslWGsstcA/webhook-trigger/75c52928-c15b-4693-9763-1a4bb0d93194";
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { name, profession, description, expertiseHint } = req.body;
+  const { name, profession, description, expertiseHint, email, paid } = req.body;
 
   if (!name || !profession || !description) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -89,7 +91,8 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
 }`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // ── Call Claude API ──────────────────────────────────────────────
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type':      'application/json',
@@ -103,14 +106,14 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
       }),
     });
 
-    if (!response.ok) {
-      const err = await response.text();
+    if (!claudeRes.ok) {
+      const err = await claudeRes.text();
       console.error('[Claude API error]', err);
       return res.status(502).json({ error: 'AI service error. Please try again.' });
     }
 
-    const data  = await response.json();
-    const text  = data.content?.find((b) => b.type === 'text')?.text || '';
+    const claudeData = await claudeRes.json();
+    const text  = claudeData.content?.find((b) => b.type === 'text')?.text || '';
     const clean = text.replace(/```json|```/g, '').trim();
 
     let result;
@@ -119,6 +122,36 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
     } catch {
       console.error('[Parse error]', clean);
       return res.status(502).json({ error: 'Failed to parse AI response. Please try again.' });
+    }
+
+    // ── Fire GHL webhook server-side ────────────────────────────────
+    try {
+      await fetch(GHL_WEBHOOK_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName:          name,
+          email:              email || '',
+          profession:         profession,
+          expertiseType:      result.expertiseType,
+          expertiseDesc:      result.expertiseDescription,
+          threat1Title:       result.threats[0].title,
+          threat1Description: result.threats[0].description,
+          threat1Earning:     result.threats[0].earning,
+          threat2Title:       result.threats[1].title,
+          threat2Description: result.threats[1].description,
+          threat2Earning:     result.threats[1].earning,
+          threat3Title:       result.threats[2].title,
+          threat3Description: result.threats[2].description,
+          threat3Earning:     result.threats[2].earning,
+          paid:               paid || false,
+          tags:               paid ? 'TripleStack Lead, TripleStack Paid' : 'TripleStack Lead',
+          source:             'TripleStack App',
+        }),
+      });
+      console.log('[GHL] Webhook fired successfully');
+    } catch (ghlErr) {
+      console.warn('[GHL] Webhook failed:', ghlErr);
     }
 
     res.setHeader('Access-Control-Allow-Origin', '*');
