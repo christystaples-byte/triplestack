@@ -8,11 +8,11 @@ export default function Results({ data, form, paid }) {
   const [showCalendar, setShowCalendar] = useState(false);
 
   const handleUnlock = () => {
-    // Persist session before leaving for payment
-    sessionStorage.setItem('ts_form',   JSON.stringify(form));
-    sessionStorage.setItem('ts_result', JSON.stringify(data));
-    const returnUrl = `${window.location.origin}${window.location.pathname}?paid=true`;
-    window.location.href = `${CONFIG.GHL_PAYMENT_URL}?redirect_url=${encodeURIComponent(returnUrl)}`;
+    // Save to localStorage — persists across payment redirect
+    localStorage.setItem('ts_form',   JSON.stringify(form));
+    localStorage.setItem('ts_result', JSON.stringify(data));
+    // Redirect to GHL payment page
+    window.location.href = CONFIG.GHL_PAYMENT_URL;
   };
 
   return (
