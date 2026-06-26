@@ -27,12 +27,14 @@ Your job is to:
    - Threat 2 (Package It): Turn expertise into a Product, System, Service, or Software
    - Threat 3 (Scale It): Use their reputation to create ongoing income
 
-For ALL THREE threats provide:
+For Threat 1 (Teach It) ONLY, also provide:
+- 3 concrete action steps they can implement immediately. Each step has a short title and 1-2 sentence detail that is specific and actionable, not generic
+- A conservative pricing breakdown with: a specific price point, a realistic monthly quantity, the resulting monthly total, and one sentence on how to scale
+
+For Threats 2 and 3, provide ONLY:
 - A short punchy title (4-7 words)
 - A 2-3 sentence description tailored to their specific profession
 - A realistic earning range (e.g. "$500-$2,000/month")
-- 3 concrete action steps they can implement immediately. Each step has a short title and 1-2 sentence detail that is specific and actionable, not generic
-- A conservative pricing breakdown with: a specific price point, a realistic monthly quantity, the resulting monthly total, and one sentence on how to scale
 
 Respond ONLY with valid JSON in this exact format — no markdown fences, no preamble, no trailing text:
 {
@@ -55,38 +57,8 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
         "scale": "..."
       }
     },
-    {
-      "title": "...",
-      "description": "...",
-      "earning": "...",
-      "steps": [
-        { "num": "01", "title": "...", "detail": "..." },
-        { "num": "02", "title": "...", "detail": "..." },
-        { "num": "03", "title": "...", "detail": "..." }
-      ],
-      "pricing": {
-        "price": "...",
-        "quantity": "...",
-        "monthly": "...",
-        "scale": "..."
-      }
-    },
-    {
-      "title": "...",
-      "description": "...",
-      "earning": "...",
-      "steps": [
-        { "num": "01", "title": "...", "detail": "..." },
-        { "num": "02", "title": "...", "detail": "..." },
-        { "num": "03", "title": "...", "detail": "..." }
-      ],
-      "pricing": {
-        "price": "...",
-        "quantity": "...",
-        "monthly": "...",
-        "scale": "..."
-      }
-    }
+    { "title": "...", "description": "...", "earning": "..." },
+    { "title": "...", "description": "...", "earning": "..." }
   ]
 }`;
 
@@ -101,7 +73,7 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
       },
       body: JSON.stringify({
         model:      'claude-sonnet-4-5',
-        max_tokens: 2500,
+        max_tokens: 1200,
         messages:   [{ role: 'user', content: prompt }],
       }),
     });
@@ -124,35 +96,30 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
       return res.status(502).json({ error: 'Failed to parse AI response. Please try again.' });
     }
 
-    // ── Fire GHL webhook server-side ────────────────────────────────
-    try {
-      await fetch(GHL_WEBHOOK_URL, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName:          name,
-          email:              email || '',
-          profession:         profession,
-          expertiseType:      result.expertiseType,
-          expertiseDesc:      result.expertiseDescription,
-          threat1Title:       result.threats[0].title,
-          threat1Description: result.threats[0].description,
-          threat1Earning:     result.threats[0].earning,
-          threat2Title:       result.threats[1].title,
-          threat2Description: result.threats[1].description,
-          threat2Earning:     result.threats[1].earning,
-          threat3Title:       result.threats[2].title,
-          threat3Description: result.threats[2].description,
-          threat3Earning:     result.threats[2].earning,
-          paid:               paid || false,
-          tags:               paid ? 'TripleStack Lead, TripleStack Paid' : 'TripleStack Lead',
-          source:             'TripleStack App',
-        }),
-      });
-      console.log('[GHL] Webhook fired successfully');
-    } catch (ghlErr) {
-      console.warn('[GHL] Webhook failed:', ghlErr);
-    }
+    // ── Fire GHL webhook async (non-blocking) ────────────────────────
+    fetch(GHL_WEBHOOK_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName:          name,
+        email:              email || '',
+        profession:         profession,
+        expertiseType:      result.expertiseType,
+        expertiseDesc:      result.expertiseDescription,
+        threat1Title:       result.threats[0].title,
+        threat1Description: result.threats[0].description,
+        threat1Earning:     result.threats[0].earning,
+        threat2Title:       result.threats[1].title,
+        threat2Description: result.threats[1].description,
+        threat2Earning:     result.threats[1].earning,
+        threat3Title:       result.threats[2].title,
+        threat3Description: result.threats[2].description,
+        threat3Earning:     result.threats[2].earning,
+        paid:               paid || false,
+        tags:               paid ? 'TripleStack Lead, TripleStack Paid' : 'TripleStack Lead',
+        source:             'TripleStack App',
+      }),
+    }).catch(err => console.warn('[GHL] Webhook failed:', err));
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST');
