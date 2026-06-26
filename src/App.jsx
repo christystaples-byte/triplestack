@@ -5,7 +5,6 @@ import Processing from './components/Processing.jsx';
 import Results    from './components/Results.jsx';
 import { classifyAndGenerate, sendToGHL } from './api.js';
 
-// ── Screen constants ───────────────────────────────────────────────────────
 const SCREENS = {
   LANDING:    'landing',
   INTAKE:     'intake',
@@ -20,13 +19,12 @@ export default function App() {
   const [paid,       setPaid]       = useState(false);
   const [error,      setError]      = useState('');
 
-  // ── On mount: detect ?paid=true redirect back from GHL ──────────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
     if (params.get('paid') === 'true') {
-      const savedForm   = sessionStorage.getItem('ts_form');
-      const savedResult = sessionStorage.getItem('ts_result');
+      const savedForm   = localStorage.getItem('ts_form');
+      const savedResult = localStorage.getItem('ts_result');
 
       if (savedForm && savedResult) {
         try {
@@ -38,20 +36,25 @@ export default function App() {
           setPaid(true);
           setScreen(SCREENS.RESULTS);
 
-          // Fire paid webhook → triggers GHL email automation
           sendToGHL(form, result, true);
 
-          // Clean ?paid=true from the URL without reload
           window.history.replaceState({}, '', window.location.pathname);
+
+          // Clean up localStorage after restoring
+          localStorage.removeItem('ts_form');
+          localStorage.removeItem('ts_result');
+
         } catch {
-          // Session data corrupt — send back to landing gracefully
-          sessionStorage.clear();
+          localStorage.clear();
         }
+      } else {
+        // No session found — send to intake to re-enter info
+        window.history.replaceState({}, '', window.location.pathname);
+        setScreen(SCREENS.INTAKE);
       }
     }
   }, []);
 
-  // ── Intake submit → AI → GHL (free) → results ───────────────────────────
   const handleIntakeSubmit = async (form) => {
     setFormData(form);
     setScreen(SCREENS.PROCESSING);
@@ -59,7 +62,6 @@ export default function App() {
 
     try {
       const result = await classifyAndGenerate(form);
-      await sendToGHL(form, result, false);
       setResultData(result);
       setScreen(SCREENS.RESULTS);
     } catch (err) {
