@@ -23,8 +23,13 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
 
     if (params.get('paid') === 'true') {
+      // Try to restore session from localStorage
       const savedForm   = localStorage.getItem('ts_form');
       const savedResult = localStorage.getItem('ts_result');
+
+      console.log('[App] paid=true detected');
+      console.log('[App] savedForm:', savedForm ? 'found' : 'NOT FOUND');
+      console.log('[App] savedResult:', savedResult ? 'found' : 'NOT FOUND');
 
       if (savedForm && savedResult) {
         try {
@@ -36,19 +41,24 @@ export default function App() {
           setPaid(true);
           setScreen(SCREENS.RESULTS);
 
-          sendToGHL(form, result, true);
+          sendToGHL(form, result, true).catch(console.warn);
 
+          // Clean URL without reload
           window.history.replaceState({}, '', window.location.pathname);
 
-          // Clean up localStorage after restoring
-          localStorage.removeItem('ts_form');
-          localStorage.removeItem('ts_result');
+          // Don't clear localStorage immediately — wait a beat
+          setTimeout(() => {
+            localStorage.removeItem('ts_form');
+            localStorage.removeItem('ts_result');
+          }, 5000);
 
-        } catch {
-          localStorage.clear();
+        } catch (e) {
+          console.error('[App] Failed to parse saved session:', e);
+          setScreen(SCREENS.INTAKE);
         }
       } else {
-        // No session found — send to intake to re-enter info
+        // Session not found — go to intake so they can re-enter
+        console.warn('[App] No saved session found after payment');
         window.history.replaceState({}, '', window.location.pathname);
         setScreen(SCREENS.INTAKE);
       }
