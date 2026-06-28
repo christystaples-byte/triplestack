@@ -19,67 +19,64 @@ export default function App() {
   const [paid,       setPaid]       = useState(false);
   const [error,      setError]      = useState('');
 
- useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
 
-  if (params.get('paid') === 'true') {
-    console.log('[App] paid=true detected');
+    if (params.get('paid') === 'true') {
+      console.log('[App] paid=true detected');
 
-    const restoreSession = async () => {
-      // Try server-side session first using stored ID
-      const sessionId = localStorage.getItem('ts_sid');
-      console.log('[App] sessionId from localStorage:', sessionId || 'NOT FOUND');
+      const restoreSession = async () => {
+        const sessionId = localStorage.getItem('ts_sid');
+        console.log('[App] sessionId:', sessionId || 'NOT FOUND');
 
-      if (sessionId) {
-        try {
-          const res = await fetch(`/api/session?id=${sessionId}`);
-          if (res.ok) {
-            const { form, result } = await res.json();
-            console.log('[App] Session restored from server ✅');
+        if (sessionId) {
+          try {
+            const res = await fetch(`/api/session?id=${sessionId}`);
+            if (res.ok) {
+              const { form, result } = await res.json();
+              console.log('[App] Session restored from server');
+              setFormData(form);
+              setResultData(result);
+              setPaid(true);
+              setScreen(SCREENS.RESULTS);
+              sendToGHL(form, result, true).catch(console.warn);
+              window.history.replaceState({}, '', window.location.pathname);
+              localStorage.removeItem('ts_sid');
+              return;
+            }
+          } catch (e) {
+            console.warn('[App] Server session failed:', e);
+          }
+        }
+
+        const encoded = localStorage.getItem('ts_s');
+        console.log('[App] encoded session:', encoded ? 'FOUND' : 'NOT FOUND');
+
+        if (encoded) {
+          try {
+            const { form, result } = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+            console.log('[App] Session restored from localStorage');
             setFormData(form);
             setResultData(result);
             setPaid(true);
             setScreen(SCREENS.RESULTS);
             sendToGHL(form, result, true).catch(console.warn);
             window.history.replaceState({}, '', window.location.pathname);
-            localStorage.removeItem('ts_sid');
+            localStorage.removeItem('ts_s');
             return;
+          } catch (e) {
+            console.warn('[App] localStorage decode failed:', e);
           }
-        } catch (e) {
-          console.warn('[App] Server session fetch failed:', e);
         }
-      }
 
-      // Fallback — try localStorage encoded session
-      const encoded = localStorage.getItem('ts_s');
-      console.log('[App] encoded session:', encoded ? 'FOUND' : 'NOT FOUND');
+        console.warn('[App] No session found');
+        window.history.replaceState({}, '', window.location.pathname);
+        setScreen(SCREENS.INTAKE);
+      };
 
-      if (encoded) {
-        try {
-          const { form, result } = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-          console.log('[App] Session restored from localStorage ✅');
-          setFormData(form);
-          setResultData(result);
-          setPaid(true);
-          setScreen(SCREENS.RESULTS);
-          sendToGHL(form, result, true).catch(console.warn);
-          window.history.replaceState({}, '', window.location.pathname);
-          localStorage.removeItem('ts_s');
-          return;
-        } catch (e) {
-          console.warn('[App] localStorage decode failed:', e);
-        }
-      }
-
-      // Nothing found
-      console.warn('[App] No session found — sending to intake');
-      window.history.replaceState({}, '', window.location.pathname);
-      setScreen(SCREENS.INTAKE);
-    };
-
-    restoreSession();
-  }
-}, []);
+      restoreSession();
+    }
+  }, []);
 
   const handleIntakeSubmit = async (form) => {
     setFormData(form);
