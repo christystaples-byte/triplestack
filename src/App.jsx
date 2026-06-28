@@ -25,17 +25,20 @@ export default function App() {
   if (params.get('paid') === 'true') {
     console.log('[App] paid=true detected');
 
-    // Try all storage methods
-    const session = 
-      localStorage.getItem('ts_session') ||
-      localStorage.getItem('ts_session_backup') ||
-      sessionStorage.getItem('ts_session');
+    // Try localStorage first
+    let session = localStorage.getItem('ts_s') || sessionStorage.getItem('ts_s');
+
+    // Fall back to cookie
+    if (!session) {
+      const match = document.cookie.match(/ts_s=([^;]+)/);
+      if (match) session = match[1];
+    }
 
     console.log('[App] session:', session ? 'FOUND' : 'NOT FOUND');
 
     if (session) {
       try {
-        const { form, result } = JSON.parse(atob(session));
+        const { form, result } = JSON.parse(decodeURIComponent(atob(session)));
 
         setFormData(form);
         setResultData(result);
@@ -45,18 +48,19 @@ export default function App() {
         sendToGHL(form, result, true).catch(console.warn);
         window.history.replaceState({}, '', window.location.pathname);
 
+        // Clean up after 5 seconds
         setTimeout(() => {
-          localStorage.removeItem('ts_session');
-          localStorage.removeItem('ts_session_backup');
-          sessionStorage.removeItem('ts_session');
+          localStorage.removeItem('ts_s');
+          sessionStorage.removeItem('ts_s');
+          document.cookie = 'ts_s=; path=/; max-age=0';
         }, 5000);
 
       } catch (e) {
-        console.error('[App] Failed to restore session:', e);
+        console.error('[App] Restore failed:', e);
         setScreen(SCREENS.INTAKE);
       }
     } else {
-      console.warn('[App] No session found — sending to intake');
+      console.warn('[App] No session found');
       window.history.replaceState({}, '', window.location.pathname);
       setScreen(SCREENS.INTAKE);
     }
