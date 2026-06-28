@@ -24,57 +24,75 @@ export default function App() {
 
     if (params.get('paid') === 'true') {
       console.log('[App] paid=true detected');
+      window.history.replaceState({}, '', window.location.pathname);
 
-      const restoreSession = async () => {
-        const sessionId = localStorage.getItem('ts_sid');
-        console.log('[App] sessionId:', sessionId || 'NOT FOUND');
+      // Try all storage keys
+      const keys = ['ts_s', 'ts_session', 'ts_sid', 'triplestack_session'];
+      let restored = false;
 
-        if (sessionId) {
+      for (const key of keys) {
+        const raw = localStorage.getItem(key);
+        console.log(`[App] localStorage.${key}:`, raw ? 'FOUND' : 'not found');
+        if (raw) {
           try {
-            const res = await fetch(`/api/session?id=${sessionId}`);
-            if (res.ok) {
-              const { form, result } = await res.json();
-              console.log('[App] Session restored from server');
+            let parsed;
+            // Try direct JSON first
+            try { parsed = JSON.parse(raw); } catch {
+              // Try base64 decode
+              parsed = JSON.parse(decodeURIComponent(escape(atob(raw))));
+            }
+            const form   = parsed.form   || parsed;
+            const result = parsed.result || parsed;
+            if (form && result && result.threats) {
+              console.log('[App] Restored from', key);
               setFormData(form);
               setResultData(result);
               setPaid(true);
               setScreen(SCREENS.RESULTS);
               sendToGHL(form, result, true).catch(console.warn);
-              window.history.replaceState({}, '', window.location.pathname);
-              localStorage.removeItem('ts_sid');
-              return;
+              localStorage.removeItem(key);
+              restored = true;
+              break;
             }
           } catch (e) {
-            console.warn('[App] Server session failed:', e);
+            console.warn(`[App] Failed to parse ${key}:`, e);
           }
         }
+      }
 
-        const encoded = localStorage.getItem('ts_s');
-        console.log('[App] encoded session:', encoded ? 'FOUND' : 'NOT FOUND');
-
-        if (encoded) {
+      if (!restored) {
+        // Last resort — check if form data exists to re-run analysis
+        const savedForm = localStorage.getItem('ts_form_only');
+        if (savedForm) {
           try {
-            const { form, result } = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-            console.log('[App] Session restored from localStorage');
+            const form = JSON.parse(savedForm);
+            console.log('[App] Re-running analysis for paid user:', form.email);
             setFormData(form);
-            setResultData(result);
-            setPaid(true);
-            setScreen(SCREENS.RESULTS);
-            sendToGHL(form, result, true).catch(console.warn);
-            window.history.replaceState({}, '', window.location.pathname);
-            localStorage.removeItem('ts_s');
+            setScreen(SCREENS.PROCESSING);
+            classifyAndGenerate(form).then(result => {
+              setResultData(result);
+              setPaid(true);
+              setScreen(SCREENS.RESULTS);
+              sendToGHL(form, result, true).catch(console.warn);
+              localStorage.removeItem('ts_form_only');
+            }).catch(() => setScreen(SCREENS.INTAKE));
             return;
           } catch (e) {
-            console.warn('[App] localStorage decode failed:', e);
+            console.warn('[App] Re-run failed:', e);
           }
         }
 
-        console.warn('[App] No session found');
-        window.history.replaceState({}, '', window.location.pathname);
+        console.warn('[App] No session found — sending to paid intake');
+        // Send to intake but pre-mark as paid
+        localStorage.setItem('ts_paid_pending', 'true');
         setScreen(SCREENS.INTAKE);
-      };
+      }
+    }
 
-      restoreSession();
+    // Check if returning paid user filling intake again
+    const paidPending = localStorage.getItem('ts_paid_pending');
+    if (paidPending) {
+      setPaid(true);
     }
   }, []);
 
@@ -86,6 +104,11 @@ export default function App() {
     try {
       const result = await classifyAndGenerate(form);
       setResultData(result);
+      const isPaid = localStorage.getItem('ts_paid_pending') === 'true';
+      if (isPaid) {
+        setPaid(true);
+        localStorage.removeItem('ts_paid_pending');
+      }
       setScreen(SCREENS.RESULTS);
     } catch (err) {
       console.error('[App] Analysis failed:', err);
