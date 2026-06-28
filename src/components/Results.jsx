@@ -9,32 +9,23 @@ export default function Results({ data, form, paid }) {
 
 const handleUnlock = () => {
   try {
-    const session = {
-      form,
-      result: data
-    };
+    const session = { form, result: data };
     const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
 
-    // Save to localStorage as primary
+    // Save under multiple keys
     localStorage.setItem('ts_s', encoded);
-    console.log('[Results] Saved to localStorage:', localStorage.getItem('ts_s') ? '✅' : '❌');
+    localStorage.setItem('ts_session', encoded);
 
-    // Also append to the return URL so GHL sends it back
-    const returnUrl = `https://app.hiregetlaunched.com?paid=true&s=${encodeURIComponent(encoded)}`;
+    // Also save form alone for re-run fallback
+    localStorage.setItem('ts_form_only', JSON.stringify(form));
 
-    // Update GHL payment link redirect to include session
-    // We redirect to payment and pass the return URL as a parameter
-    console.log('[Results] Redirecting to payment...');
-
-    // Store session ID in URL hash — survives redirects
-    window.location.href = CONFIG.GHL_PAYMENT_URL + '#' + encoded.substring(0, 100);
-
+    console.log('[Results] Saved session — ts_s:', localStorage.getItem('ts_s') ? '✅' : '❌');
+    console.log('[Results] Saved form_only:', localStorage.getItem('ts_form_only') ? '✅' : '❌');
   } catch (e) {
-    console.error('[Results] Error:', e);
-    window.location.href = CONFIG.GHL_PAYMENT_URL;
+    console.error('[Results] Save error:', e);
   }
+  window.location.href = CONFIG.GHL_PAYMENT_URL;
 };
-
     if (res.ok) {
       console.log('[Results] Session saved to server ✅ id:', sessionId);
       // Store only the session ID in localStorage as backup
