@@ -7,21 +7,35 @@ export default function Results({ data, form, paid }) {
   const { expertiseType, expertiseDescription, threats } = data;
   const [showCalendar, setShowCalendar] = useState(false);
 
- const handleUnlock = () => {
-  try {
-    // Encode session data into the return URL
-    const session = btoa(JSON.stringify({
-      form: form,
-      result: data
-    }));
-    localStorage.setItem('ts_session', session);
-    localStorage.setItem('ts_session_backup', session);
-    sessionStorage.setItem('ts_session', session);
-    console.log('[Results] Session saved, redirecting to payment');
-  } catch (e) {
-    console.error('[Results] Failed to save session:', e);
-  }
-  window.location.href = CONFIG.GHL_PAYMENT_URL;
+const handleUnlock = () => {
+  // Store session in multiple places
+  const session = {
+    name: form.name,
+    email: form.email,
+    profession: form.profession,
+    expertiseType: data.expertiseType,
+    expertiseDescription: data.expertiseDescription,
+    threats: data.threats
+  };
+
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
+
+  // Try every storage method available
+  try { localStorage.setItem('ts_s', encoded); } catch(e) {}
+  try { sessionStorage.setItem('ts_s', encoded); } catch(e) {}
+  try { document.cookie = `ts_s=${encoded}; path=/; max-age=3600; SameSite=None; Secure`; } catch(e) {}
+
+  // Also store email alone as a simple key
+  try { localStorage.setItem('ts_email', form.email); } catch(e) {}
+
+  console.log('[Results] Session saved — redirecting');
+  console.log('[Results] localStorage ts_s:', localStorage.getItem('ts_s') ? 'SAVED ✅' : 'FAILED ❌');
+  console.log('[Results] cookie:', document.cookie.includes('ts_s') ? 'SAVED ✅' : 'FAILED ❌');
+
+  // Small delay to ensure saves complete before redirect
+  setTimeout(() => {
+    window.location.href = CONFIG.GHL_PAYMENT_URL;
+  }, 500);
 };
 
   return (
