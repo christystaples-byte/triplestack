@@ -95,3 +95,23 @@ export default function Results({ data, form, paid }) {
               <strong>free discovery call</strong> where we map out exactly how to launch your
               first additional income stream — with a real plan, real timelines, and real support.
             </p>
+            </div>
+
+          {!showCalendar ? (
+            <button className={styles.btnLime} onClick={() => setShowCalendar(true)}>
+              Book My Launch Call — Free →
+            </button>
+          ) : (
+            <div className={styles.calendarWrap}>
+              <iframe
+                src={CONFIG.GHL_CALENDAR_URL}
+                title="Book a Discovery Call"
+                scrolling="no"
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </main>
+  );
+}
