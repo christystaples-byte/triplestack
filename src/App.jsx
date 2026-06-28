@@ -20,50 +20,48 @@ export default function App() {
   const [error,      setError]      = useState('');
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(window.location.search);
 
-    if (params.get('paid') === 'true') {
-      // Try to restore session from localStorage
-      const savedForm   = localStorage.getItem('ts_form');
-      const savedResult = localStorage.getItem('ts_result');
+  if (params.get('paid') === 'true') {
+    console.log('[App] paid=true detected');
 
-      console.log('[App] paid=true detected');
-      console.log('[App] savedForm:', savedForm ? 'found' : 'NOT FOUND');
-      console.log('[App] savedResult:', savedResult ? 'found' : 'NOT FOUND');
+    // Try all storage methods
+    const session = 
+      localStorage.getItem('ts_session') ||
+      localStorage.getItem('ts_session_backup') ||
+      sessionStorage.getItem('ts_session');
 
-      if (savedForm && savedResult) {
-        try {
-          const form   = JSON.parse(savedForm);
-          const result = JSON.parse(savedResult);
+    console.log('[App] session:', session ? 'FOUND' : 'NOT FOUND');
 
-          setFormData(form);
-          setResultData(result);
-          setPaid(true);
-          setScreen(SCREENS.RESULTS);
+    if (session) {
+      try {
+        const { form, result } = JSON.parse(atob(session));
 
-          sendToGHL(form, result, true).catch(console.warn);
+        setFormData(form);
+        setResultData(result);
+        setPaid(true);
+        setScreen(SCREENS.RESULTS);
 
-          // Clean URL without reload
-          window.history.replaceState({}, '', window.location.pathname);
-
-          // Don't clear localStorage immediately — wait a beat
-          setTimeout(() => {
-            localStorage.removeItem('ts_form');
-            localStorage.removeItem('ts_result');
-          }, 5000);
-
-        } catch (e) {
-          console.error('[App] Failed to parse saved session:', e);
-          setScreen(SCREENS.INTAKE);
-        }
-      } else {
-        // Session not found — go to intake so they can re-enter
-        console.warn('[App] No saved session found after payment');
+        sendToGHL(form, result, true).catch(console.warn);
         window.history.replaceState({}, '', window.location.pathname);
+
+        setTimeout(() => {
+          localStorage.removeItem('ts_session');
+          localStorage.removeItem('ts_session_backup');
+          sessionStorage.removeItem('ts_session');
+        }, 5000);
+
+      } catch (e) {
+        console.error('[App] Failed to restore session:', e);
         setScreen(SCREENS.INTAKE);
       }
+    } else {
+      console.warn('[App] No session found — sending to intake');
+      window.history.replaceState({}, '', window.location.pathname);
+      setScreen(SCREENS.INTAKE);
     }
-  }, []);
+  }
+}, []);
 
   const handleIntakeSubmit = async (form) => {
     setFormData(form);
