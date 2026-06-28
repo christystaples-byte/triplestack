@@ -7,40 +7,30 @@ export default function Results({ data, form, paid }) {
   const { expertiseType, expertiseDescription, threats } = data;
   const [showCalendar, setShowCalendar] = useState(false);
 
-const handleUnlock = () => {
+const handleUnlock = async () => {
   try {
-    const session = { form, result: data };
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
+    console.log('[Results] Creating checkout session...');
 
-    // Save under multiple keys
-    localStorage.setItem('ts_s', encoded);
-    localStorage.setItem('ts_session', encoded);
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ form, result: data })
+    });
 
-    // Also save form alone for re-run fallback
-    localStorage.setItem('ts_form_only', JSON.stringify(form));
-
-    console.log('[Results] Saved session — ts_s:', localStorage.getItem('ts_s') ? '✅' : '❌');
-    console.log('[Results] Saved form_only:', localStorage.getItem('ts_form_only') ? '✅' : '❌');
-  } catch (e) {
-    console.error('[Results] Save error:', e);
-  }
-  window.location.href = CONFIG.GHL_PAYMENT_URL;
-};
     if (res.ok) {
-      console.log('[Results] Session saved to server ✅ id:', sessionId);
-      // Store only the session ID in localStorage as backup
-      localStorage.setItem('ts_sid', sessionId);
+      const { url, session } = await res.json();
+      console.log('[Results] Checkout URL received ✅');
+      // Save session locally as backup
+      localStorage.setItem('ts_s', session);
+      // Redirect to payment with session encoded in return URL
+      window.location.href = url;
     } else {
-      console.warn('[Results] Server save failed, falling back to localStorage');
+      console.warn('[Results] Checkout API failed, using direct link');
       localStorage.setItem('ts_s', btoa(unescape(encodeURIComponent(JSON.stringify({ form, result: data })))));
+      window.location.href = CONFIG.GHL_PAYMENT_URL;
     }
-
-    // Redirect to payment with session ID in URL
-    window.location.href = `${CONFIG.GHL_PAYMENT_URL}`;
-
   } catch (e) {
-    console.error('[Results] Session save error:', e);
-    // Fallback — still redirect
+    console.error('[Results] Checkout error:', e);
     localStorage.setItem('ts_s', btoa(unescape(encodeURIComponent(JSON.stringify({ form, result: data })))));
     window.location.href = CONFIG.GHL_PAYMENT_URL;
   }
