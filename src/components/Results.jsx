@@ -7,21 +7,33 @@ export default function Results({ data, form, paid }) {
   const { expertiseType, expertiseDescription, threats } = data;
   const [showCalendar, setShowCalendar] = useState(false);
 
-const handleUnlock = async () => {
+const handleUnlock = () => {
   try {
-    // Generate unique session ID
-    const sessionId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const session = {
+      form,
+      result: data
+    };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
 
-    // Save session to SERVER — bypasses all browser storage issues
-    const res = await fetch('/api/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId,
-        form,
-        result: data
-      })
-    });
+    // Save to localStorage as primary
+    localStorage.setItem('ts_s', encoded);
+    console.log('[Results] Saved to localStorage:', localStorage.getItem('ts_s') ? '✅' : '❌');
+
+    // Also append to the return URL so GHL sends it back
+    const returnUrl = `https://app.hiregetlaunched.com?paid=true&s=${encodeURIComponent(encoded)}`;
+
+    // Update GHL payment link redirect to include session
+    // We redirect to payment and pass the return URL as a parameter
+    console.log('[Results] Redirecting to payment...');
+
+    // Store session ID in URL hash — survives redirects
+    window.location.href = CONFIG.GHL_PAYMENT_URL + '#' + encoded.substring(0, 100);
+
+  } catch (e) {
+    console.error('[Results] Error:', e);
+    window.location.href = CONFIG.GHL_PAYMENT_URL;
+  }
+};
 
     if (res.ok) {
       console.log('[Results] Session saved to server ✅ id:', sessionId);
