@@ -7,59 +7,22 @@ export default function Results({ data, form, paid }) {
   const { expertiseType, expertiseDescription, threats } = data;
   const [showCalendar, setShowCalendar] = useState(false);
 
-const handleUnlock = async () => {
-  try {
-    console.log('[Results] Creating checkout session...');
-
-    const res = await fetch('/api/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ form, result: data })
-    });
-
-    if (res.ok) {
-      const { url, session } = await res.json();
-      console.log('[Results] Checkout URL received ✅');
-      // Save session locally as backup
-      localStorage.setItem('ts_s', session);
-      // Redirect to payment with session encoded in return URL
-      window.location.href = url;
-    } else {
-      console.warn('[Results] Checkout API failed, using direct link');
-      localStorage.setItem('ts_s', btoa(unescape(encodeURIComponent(JSON.stringify({ form, result: data })))));
-      window.location.href = CONFIG.GHL_PAYMENT_URL;
+  const handleUnlock = () => {
+    try {
+      const session = { form, result: data };
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
+      localStorage.setItem('ts_s', encoded);
+      localStorage.setItem('ts_form_only', JSON.stringify(form));
+      console.log('[Results] Saved ts_s:', localStorage.getItem('ts_s') ? 'YES' : 'NO');
+    } catch (e) {
+      console.error('[Results] Save error:', e);
     }
-  } catch (e) {
-    console.error('[Results] Checkout error:', e);
-    localStorage.setItem('ts_s', btoa(unescape(encodeURIComponent(JSON.stringify({ form, result: data })))));
     window.location.href = CONFIG.GHL_PAYMENT_URL;
-  }
-};
-
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
-
-  // Try every storage method available
-  try { localStorage.setItem('ts_s', encoded); } catch(e) {}
-  try { sessionStorage.setItem('ts_s', encoded); } catch(e) {}
-  try { document.cookie = `ts_s=${encoded}; path=/; max-age=3600; SameSite=None; Secure`; } catch(e) {}
-
-  // Also store email alone as a simple key
-  try { localStorage.setItem('ts_email', form.email); } catch(e) {}
-
-  console.log('[Results] Session saved — redirecting');
-  console.log('[Results] localStorage ts_s:', localStorage.getItem('ts_s') ? 'SAVED ✅' : 'FAILED ❌');
-  console.log('[Results] cookie:', document.cookie.includes('ts_s') ? 'SAVED ✅' : 'FAILED ❌');
-
-  // Small delay to ensure saves complete before redirect
-  setTimeout(() => {
-    window.location.href = CONFIG.GHL_PAYMENT_URL;
-  }, 500);
-};
+  };
 
   return (
     <main className={styles.results}>
 
-      {/* ── Payment confirmation banner ── */}
       {paid && (
         <div className={styles.paidBanner} role="alert">
           <span aria-hidden="true">🔓</span>
@@ -70,7 +33,6 @@ const handleUnlock = async () => {
         </div>
       )}
 
-      {/* ── Profile header ── */}
       <p className={styles.eyebrow}>Your TripleStack Profile</p>
       <h2 className={styles.name}>
         {form.name}'s<br /><span>Income Stack</span>
@@ -83,7 +45,6 @@ const handleUnlock = async () => {
 
       <p className={styles.expertiseDesc}>{expertiseDescription}</p>
 
-      {/* ── Threat cards ── */}
       <p className={styles.streamsLabel}>Your 3 Income Streams</p>
 
       {threats.map((threat, i) => (
@@ -95,7 +56,6 @@ const handleUnlock = async () => {
         />
       ))}
 
-      {/* ── Free state: hook + $7 upsell ── */}
       {!paid && (
         <>
           <div className={styles.hook}>
@@ -125,7 +85,6 @@ const handleUnlock = async () => {
         </>
       )}
 
-      {/* ── Paid state: book discovery call ── */}
       {paid && (
         <div className={styles.cta}>
           <div className={styles.ctaHook}>
@@ -136,27 +95,3 @@ const handleUnlock = async () => {
               <strong>free discovery call</strong> where we map out exactly how to launch your
               first additional income stream — with a real plan, real timelines, and real support.
             </p>
-          </div>
-
-          {!showCalendar ? (
-            <button className={styles.btnLime} onClick={() => setShowCalendar(true)}>
-              Book My Launch Call — Free →
-            </button>
-          ) : (
-            <div className={styles.calendarWrap}>
-              <iframe
-                src={CONFIG.GHL_CALENDAR_URL}
-                title="Book a Discovery Call"
-                scrolling="no"
-              />
-              <script
-                src="https://link.convertandflow.com/js/form_embed.js"
-                type="text/javascript"
-              />
-            </div>
-          )}
-        </div>
-      )}
-    </main>
-  );
-}
