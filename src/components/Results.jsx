@@ -7,13 +7,22 @@ export default function Results({ data, form, paid }) {
   const { expertiseType, expertiseDescription, threats } = data;
   const [showCalendar, setShowCalendar] = useState(false);
 
-  const handleUnlock = () => {
-    // Save to localStorage — persists across payment redirect
-    localStorage.setItem('ts_form',   JSON.stringify(form));
-    localStorage.setItem('ts_result', JSON.stringify(data));
-    // Redirect to GHL payment page
-    window.location.href = CONFIG.GHL_PAYMENT_URL;
-  };
+ const handleUnlock = () => {
+  try {
+    // Encode session data into the return URL
+    const session = btoa(JSON.stringify({
+      form: form,
+      result: data
+    }));
+    localStorage.setItem('ts_session', session);
+    localStorage.setItem('ts_session_backup', session);
+    sessionStorage.setItem('ts_session', session);
+    console.log('[Results] Session saved, redirecting to payment');
+  } catch (e) {
+    console.error('[Results] Failed to save session:', e);
+  }
+  window.location.href = CONFIG.GHL_PAYMENT_URL;
+};
 
   return (
     <main className={styles.results}>
