@@ -19,51 +19,65 @@ export default function App() {
   const [paid,       setPaid]       = useState(false);
   const [error,      setError]      = useState('');
 
-  useEffect(() => {
+ useEffect(() => {
   const params = new URLSearchParams(window.location.search);
 
   if (params.get('paid') === 'true') {
     console.log('[App] paid=true detected');
 
-    // Try localStorage first
-    let session = localStorage.getItem('ts_s') || sessionStorage.getItem('ts_s');
+    const restoreSession = async () => {
+      // Try server-side session first using stored ID
+      const sessionId = localStorage.getItem('ts_sid');
+      console.log('[App] sessionId from localStorage:', sessionId || 'NOT FOUND');
 
-    // Fall back to cookie
-    if (!session) {
-      const match = document.cookie.match(/ts_s=([^;]+)/);
-      if (match) session = match[1];
-    }
-
-    console.log('[App] session:', session ? 'FOUND' : 'NOT FOUND');
-
-    if (session) {
-      try {
-        const { form, result } = JSON.parse(decodeURIComponent(atob(session)));
-
-        setFormData(form);
-        setResultData(result);
-        setPaid(true);
-        setScreen(SCREENS.RESULTS);
-
-        sendToGHL(form, result, true).catch(console.warn);
-        window.history.replaceState({}, '', window.location.pathname);
-
-        // Clean up after 5 seconds
-        setTimeout(() => {
-          localStorage.removeItem('ts_s');
-          sessionStorage.removeItem('ts_s');
-          document.cookie = 'ts_s=; path=/; max-age=0';
-        }, 5000);
-
-      } catch (e) {
-        console.error('[App] Restore failed:', e);
-        setScreen(SCREENS.INTAKE);
+      if (sessionId) {
+        try {
+          const res = await fetch(`/api/session?id=${sessionId}`);
+          if (res.ok) {
+            const { form, result } = await res.json();
+            console.log('[App] Session restored from server ✅');
+            setFormData(form);
+            setResultData(result);
+            setPaid(true);
+            setScreen(SCREENS.RESULTS);
+            sendToGHL(form, result, true).catch(console.warn);
+            window.history.replaceState({}, '', window.location.pathname);
+            localStorage.removeItem('ts_sid');
+            return;
+          }
+        } catch (e) {
+          console.warn('[App] Server session fetch failed:', e);
+        }
       }
-    } else {
-      console.warn('[App] No session found');
+
+      // Fallback — try localStorage encoded session
+      const encoded = localStorage.getItem('ts_s');
+      console.log('[App] encoded session:', encoded ? 'FOUND' : 'NOT FOUND');
+
+      if (encoded) {
+        try {
+          const { form, result } = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+          console.log('[App] Session restored from localStorage ✅');
+          setFormData(form);
+          setResultData(result);
+          setPaid(true);
+          setScreen(SCREENS.RESULTS);
+          sendToGHL(form, result, true).catch(console.warn);
+          window.history.replaceState({}, '', window.location.pathname);
+          localStorage.removeItem('ts_s');
+          return;
+        } catch (e) {
+          console.warn('[App] localStorage decode failed:', e);
+        }
+      }
+
+      // Nothing found
+      console.warn('[App] No session found — sending to intake');
       window.history.replaceState({}, '', window.location.pathname);
       setScreen(SCREENS.INTAKE);
-    }
+    };
+
+    restoreSession();
   }
 }, []);
 
