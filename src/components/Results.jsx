@@ -8,17 +8,20 @@ export default function Results({ data, form, paid }) {
   const [showCalendar, setShowCalendar] = useState(false);
 
   const handleUnlock = () => {
-  try {
-    const session = { form, result: data };
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
-    localStorage.setItem('ts_s', encoded);
-  } catch (e) {
-    console.error('[Results] Save error:', e);
-  }
-  // Pass email in URL as fallback - URLs survive redirects, localStorage doesn't
-  const emailParam = encodeURIComponent(form.email);
-  window.location.href = `${CONFIG.GHL_PAYMENT_URL}`;
-};
+    try {
+      const session = { form, result: data };
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
+      localStorage.setItem('ts_s', encoded);
+    } catch (e) {
+      console.error('[Results] Save error:', e);
+    }
+    // Email is the real fallback now — the session was already saved
+    // server-side (KV) when the analysis completed. GHL's payment link
+    // success URL should be configured to redirect to:
+    //   https://app.hiregetlaunched.com?paid=true&email={{contact.email}}
+    const emailParam = encodeURIComponent(form.email);
+    window.location.href = `${CONFIG.GHL_PAYMENT_URL}?email=${emailParam}`;
+  };
 
   return (
     <main className={styles.results}>
