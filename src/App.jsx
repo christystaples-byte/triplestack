@@ -3,7 +3,7 @@ import Landing    from './components/Landing.jsx';
 import Intake     from './components/Intake.jsx';
 import Processing from './components/Processing.jsx';
 import Results    from './components/Results.jsx';
-import { classifyAndGenerate, sendToGHL } from './api.js';
+import { classifyAndGenerate, sendToGHL, saveSession, fetchSession } from './api.js';
 
 const SCREENS = {
   LANDING:    'landing',
@@ -21,20 +21,41 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get('paid') !== 'true') return;
 
-    if (params.get('paid') === 'true') {
-      console.log('[App] paid=true detected');
+    console.log('[App] paid=true detected');
+    const email = params.get('email');
 
+    const restore = async () => {
+      // Primary path: look up the session we saved server-side (KV) at
+      // intake-submit time, keyed by email. This is the fix — it doesn't
+      // depend on localStorage or the URL surviving the GHL redirect.
+      if (email) {
+        console.log('[App] Looking up session for', email);
+        const session = await fetchSession(email);
+        if (session?.form && session?.result?.threats) {
+          console.log('[App] Session restored from server (KV)');
+          setFormData(session.form);
+          setResultData(session.result);
+          setPaid(true);
+          setScreen(SCREENS.RESULTS);
+          sendToGHL(session.form, session.result, true).catch(console.warn);
+          window.history.replaceState({}, '', window.location.pathname);
+          return;
+        }
+        console.warn('[App] No server session found for', email);
+      }
+
+      // Fallback: session encoded directly in the URL (in case it was
+      // ever wired up upstream, or for manual testing).
       const sessionParam = params.get('s');
-      console.log('[App] URL session param:', sessionParam ? 'FOUND' : 'not found');
-
       if (sessionParam) {
         try {
           const decoded = JSON.parse(decodeURIComponent(atob(sessionParam)));
           const form   = decoded.form;
           const result = decoded.result;
           if (form && result && result.threats) {
-            console.log('[App] Session restored from URL');
+            console.log('[App] Session restored from URL param');
             setFormData(form);
             setResultData(result);
             setPaid(true);
@@ -48,9 +69,9 @@ export default function App() {
         }
       }
 
+      // Fallback: localStorage (works if same-tab, same-browser, and the
+      // redirect didn't wipe it — not reliable, kept only as a last resort).
       const stored = localStorage.getItem('ts_s');
-      console.log('[App] localStorage ts_s:', stored ? 'FOUND' : 'not found');
-
       if (stored) {
         try {
           const decoded = JSON.parse(decodeURIComponent(escape(atob(stored))));
@@ -72,36 +93,18 @@ export default function App() {
         }
       }
 
-      const savedForm = localStorage.getItem('ts_form_only');
-      if (savedForm) {
-        try {
-          const form = JSON.parse(savedForm);
-          console.log('[App] Re-running analysis for paid user');
-          setFormData(form);
-          setScreen(SCREENS.PROCESSING);
-          classifyAndGenerate(form).then(result => {
-            setResultData(result);
-            setPaid(true);
-            setScreen(SCREENS.RESULTS);
-            sendToGHL(form, result, true).catch(console.warn);
-            localStorage.removeItem('ts_form_only');
-          }).catch(() => {
-            localStorage.setItem('ts_paid_pending', 'true');
-            setScreen(SCREENS.INTAKE);
-          });
-          window.history.replaceState({}, '', window.location.pathname);
-          return;
-        } catch (e) {
-          console.warn('[App] Re-run failed:', e);
-        }
-      }
-
-      console.warn('[App] No session — sending to intake as paid');
+      // Last resort: send to intake, flagged as paid, so at least the next
+      // successful analysis unlocks immediately instead of losing the sale.
+      console.warn('[App] No session found anywhere — sending to intake as paid');
       localStorage.setItem('ts_paid_pending', 'true');
       window.history.replaceState({}, '', window.location.pathname);
       setScreen(SCREENS.INTAKE);
-    }
+    };
 
+    restore();
+  }, []);
+
+  useEffect(() => {
     if (localStorage.getItem('ts_paid_pending') === 'true') {
       setPaid(true);
     }
@@ -112,9 +115,12 @@ export default function App() {
     setScreen(SCREENS.PROCESSING);
     setError('');
     try {
-      const result = await classifyAndGenerate(form);
-      setResultData(result);
       const isPaid = paid || localStorage.getItem('ts_paid_pending') === 'true';
+      const result = await classifyAndGenerate(form, isPaid);
+      setResultData(result);
+      // Save server-side immediately so the paid redirect can find it by
+      // email later, regardless of whether they buy now or after leaving.
+      saveSession(form, result).catch(console.warn);
       if (isPaid) {
         setPaid(true);
         localStorage.removeItem('ts_paid_pending');
