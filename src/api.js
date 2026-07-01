@@ -1,12 +1,12 @@
 import { CONFIG } from './config.js';
 
-export async function classifyAndGenerate(form) {
-  const { name, profession, description, expertiseHint } = form;
+export async function classifyAndGenerate(form, paid = false) {
+  const { name, profession, description, expertiseHint, email } = form;
 
   const response = await fetch('/api/analyze', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ name, profession, description, expertiseHint }),
+    body:    JSON.stringify({ name, profession, description, expertiseHint, email, paid }),
   });
 
   if (!response.ok) {
@@ -15,6 +15,36 @@ export async function classifyAndGenerate(form) {
   }
 
   return response.json();
+}
+
+// Persist the form+result server-side (Vercel KV) keyed by email.
+// This is what lets a paid user's session survive the cross-domain
+// GHL redirect — we look it up by email instead of relying on localStorage.
+export async function saveSession(form, result) {
+  if (!form?.email) return;
+  try {
+    await fetch('/api/session', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: form.email, form, result }),
+    });
+  } catch (err) {
+    console.warn('[Session] Save failed:', err);
+  }
+}
+
+// Look up a previously-saved session by email.
+// Returns { form, result } or null if not found / on error.
+export async function fetchSession(email) {
+  if (!email) return null;
+  try {
+    const response = await fetch(`/api/session?email=${encodeURIComponent(email)}`);
+    if (!response.ok) return null;
+    return response.json();
+  } catch (err) {
+    console.warn('[Session] Fetch failed:', err);
+    return null;
+  }
 }
 
 export async function sendToGHL(form, result, paid = false) {
