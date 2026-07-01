@@ -8,17 +8,17 @@ export default function Results({ data, form, paid }) {
   const [showCalendar, setShowCalendar] = useState(false);
 
   const handleUnlock = () => {
-    try {
-      const session = { form, result: data };
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
-      localStorage.setItem('ts_s', encoded);
-      localStorage.setItem('ts_form_only', JSON.stringify(form));
-      console.log('[Results] Saved ts_s:', localStorage.getItem('ts_s') ? 'YES' : 'NO');
-    } catch (e) {
-      console.error('[Results] Save error:', e);
-    }
-    window.location.href = CONFIG.GHL_PAYMENT_URL;
-  };
+  try {
+    const session = { form, result: data };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
+    localStorage.setItem('ts_s', encoded);
+  } catch (e) {
+    console.error('[Results] Save error:', e);
+  }
+  // Pass email in URL as fallback - URLs survive redirects, localStorage doesn't
+  const emailParam = encodeURIComponent(form.email);
+  window.location.href = `${CONFIG.GHL_PAYMENT_URL}`;
+};
 
   return (
     <main className={styles.results}>
