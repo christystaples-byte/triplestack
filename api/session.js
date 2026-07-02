@@ -64,7 +64,11 @@ export default async function handler(req, res) {
     if (!email) return res.status(400).json({ error: 'Missing email' });
     try {
       const raw = await kvCommand(['GET', keyFor(email)]);
-      if (!raw) return res.status(404).json({ error: 'Not found' });
+      if (!raw) {
+        console.log(`[Session] Lookup MISS — raw email param received: "${email}"`);
+        return res.status(404).json({ error: 'Not found' });
+      }
+      console.log(`[Session] Lookup HIT for "${email}"`);
       const session = JSON.parse(raw);
       return res.status(200).json(session);
     } catch (err) {
