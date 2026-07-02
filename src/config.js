@@ -9,4 +9,5 @@ export const CONFIG = {
   PRICE_LABEL:       "$7",
   BRAND_NAME:        "TripleStack",
   COMPANY_NAME:      "GetLaunched",
+  SUPPORT_EMAIL:     "christy.staples@gmail.com", // ← double-check this is the right inbox to use
 };
