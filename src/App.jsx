@@ -3,13 +3,15 @@ import Landing    from './components/Landing.jsx';
 import Intake     from './components/Intake.jsx';
 import Processing from './components/Processing.jsx';
 import Results    from './components/Results.jsx';
-import { classifyAndGenerate, sendToGHL, saveSession, fetchSession } from './api.js';
+import Unlock     from './components/Unlock.jsx';
+import { classifyAndGenerate, sendToGHL, saveSession } from './api.js';
 
 const SCREENS = {
   LANDING:    'landing',
   INTAKE:     'intake',
   PROCESSING: 'processing',
   RESULTS:    'results',
+  UNLOCK:     'unlock',
 };
 
 export default function App() {
@@ -18,90 +20,58 @@ export default function App() {
   const [resultData, setResultData] = useState(null);
   const [paid,       setPaid]       = useState(false);
   const [error,      setError]      = useState('');
+  const [unlockEmailHint, setUnlockEmailHint] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('paid') !== 'true') return;
 
     console.log('[App] paid=true detected');
-    const email = params.get('email');
+    const email = (params.get('email') || '').trim();
 
-    const restore = async () => {
-      // Primary path: look up the session we saved server-side (KV) at
-      // intake-submit time, keyed by email. This is the fix — it doesn't
-      // depend on localStorage or the URL surviving the GHL redirect.
-      if (email) {
-        console.log('[App] Looking up session for', email);
-        const session = await fetchSession(email);
-        if (session?.form && session?.result?.threats) {
-          console.log('[App] Session restored from server (KV)');
-          setFormData(session.form);
-          setResultData(session.result);
+    // Fast synchronous fallbacks — only relevant if a session ever ends up
+    // encoded directly in the URL or survives in localStorage. Harmless to
+    // keep checking first since they resolve instantly with no network call.
+    const sessionParam = params.get('s');
+    if (sessionParam) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(atob(sessionParam)));
+        if (decoded.form && decoded.result?.threats) {
+          setFormData(decoded.form);
+          setResultData(decoded.result);
           setPaid(true);
           setScreen(SCREENS.RESULTS);
-          sendToGHL(session.form, session.result, true).catch(console.warn);
+          sendToGHL(decoded.form, decoded.result, true).catch(console.warn);
           window.history.replaceState({}, '', window.location.pathname);
           return;
         }
-        console.warn('[App] No server session found for', email);
-      }
+      } catch (e) { console.warn('[App] URL session decode failed:', e); }
+    }
 
-      // Fallback: session encoded directly in the URL (in case it was
-      // ever wired up upstream, or for manual testing).
-      const sessionParam = params.get('s');
-      if (sessionParam) {
-        try {
-          const decoded = JSON.parse(decodeURIComponent(atob(sessionParam)));
-          const form   = decoded.form;
-          const result = decoded.result;
-          if (form && result && result.threats) {
-            console.log('[App] Session restored from URL param');
-            setFormData(form);
-            setResultData(result);
-            setPaid(true);
-            setScreen(SCREENS.RESULTS);
-            sendToGHL(form, result, true).catch(console.warn);
-            window.history.replaceState({}, '', window.location.pathname);
-            return;
-          }
-        } catch (e) {
-          console.warn('[App] URL session decode failed:', e);
+    const stored = localStorage.getItem('ts_s');
+    if (stored) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(stored))));
+        if (decoded.form && decoded.result?.threats) {
+          setFormData(decoded.form);
+          setResultData(decoded.result);
+          setPaid(true);
+          setScreen(SCREENS.RESULTS);
+          sendToGHL(decoded.form, decoded.result, true).catch(console.warn);
+          window.history.replaceState({}, '', window.location.pathname);
+          localStorage.removeItem('ts_s');
+          return;
         }
-      }
+      } catch (e) { console.warn('[App] localStorage decode failed:', e); }
+    }
 
-      // Fallback: localStorage (works if same-tab, same-browser, and the
-      // redirect didn't wipe it — not reliable, kept only as a last resort).
-      const stored = localStorage.getItem('ts_s');
-      if (stored) {
-        try {
-          const decoded = JSON.parse(decodeURIComponent(escape(atob(stored))));
-          const form   = decoded.form;
-          const result = decoded.result;
-          if (form && result && result.threats) {
-            console.log('[App] Session restored from localStorage');
-            setFormData(form);
-            setResultData(result);
-            setPaid(true);
-            setScreen(SCREENS.RESULTS);
-            sendToGHL(form, result, true).catch(console.warn);
-            window.history.replaceState({}, '', window.location.pathname);
-            localStorage.removeItem('ts_s');
-            return;
-          }
-        } catch (e) {
-          console.warn('[App] localStorage decode failed:', e);
-        }
-      }
-
-      // Last resort: send to intake, flagged as paid, so at least the next
-      // successful analysis unlocks immediately instead of losing the sale.
-      console.warn('[App] No session found anywhere — sending to intake as paid');
-      localStorage.setItem('ts_paid_pending', 'true');
-      window.history.replaceState({}, '', window.location.pathname);
-      setScreen(SCREENS.INTAKE);
-    };
-
-    restore();
+    // Primary path: hand off to the dedicated Unlock screen. It looks up
+    // the session by email (server-side, KV) and — if that email doesn't
+    // match — walks the customer through confirming it, instead of
+    // silently dropping them back at a blank intake form.
+    window.history.replaceState({}, '', window.location.pathname);
+    setUnlockEmailHint(email);
+    setScreen(SCREENS.UNLOCK);
   }, []);
 
   useEffect(() => {
@@ -118,7 +88,7 @@ export default function App() {
       const isPaid = paid || localStorage.getItem('ts_paid_pending') === 'true';
       const result = await classifyAndGenerate(form, isPaid);
       setResultData(result);
-      // Save server-side immediately so the paid redirect can find it by
+      // Save server-side immediately so a paid redirect can find it by
       // email later, regardless of whether they buy now or after leaving.
       saveSession(form, result).catch(console.warn);
       if (isPaid) {
@@ -159,6 +129,22 @@ export default function App() {
         </>
       )}
       {screen === SCREENS.PROCESSING && <Processing />}
+      {screen === SCREENS.UNLOCK && (
+        <Unlock
+          emailHint={unlockEmailHint}
+          onUnlocked={(form, result) => {
+            setFormData(form);
+            setResultData(result);
+            setPaid(true);
+            setScreen(SCREENS.RESULTS);
+            sendToGHL(form, result, true).catch(console.warn);
+          }}
+          onGiveUp={() => {
+            localStorage.setItem('ts_paid_pending', 'true');
+            setScreen(SCREENS.INTAKE);
+          }}
+        />
+      )}
       {screen === SCREENS.RESULTS && resultData && (
         <Results
           data={resultData}
