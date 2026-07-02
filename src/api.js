@@ -36,14 +36,37 @@ export async function saveSession(form, result) {
 // Look up a previously-saved session by email.
 // Returns { form, result } or null if not found / on error.
 export async function fetchSession(email) {
-  if (!email) return null;
+  const clean = String(email || '').trim().toLowerCase();
+  if (!clean) return null;
   try {
-    const response = await fetch(`/api/session?email=${encodeURIComponent(email)}`);
+    const response = await fetch(`/api/session?email=${encodeURIComponent(clean)}`);
     if (!response.ok) return null;
     return response.json();
   } catch (err) {
     console.warn('[Session] Fetch failed:', err);
     return null;
+  }
+}
+
+// Fired when a customer has paid but we couldn't automatically match their
+// payment to a saved profile (e.g. they used a different email at checkout
+// than on the intake form). Tags a GHL contact so it surfaces for manual
+// follow-up instead of the sale silently disappearing.
+export async function notifyUnmatchedPayment(triedEmails, ghlEmail) {
+  if (!CONFIG.GHL_WEBHOOK_URL) return;
+  try {
+    await fetch(CONFIG.GHL_WEBHOOK_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        email:       ghlEmail || triedEmails[0] || '',
+        triedEmails: triedEmails.join(', '),
+        tags:        'TripleStack Payment Unmatched',
+        source:      'TripleStack App — Unlock Recovery',
+      }),
+    });
+  } catch (err) {
+    console.warn('[Unlock] Unmatched-payment notify failed:', err);
   }
 }
 
