@@ -15,12 +15,18 @@ export default function Results({ data, form, paid }) {
     } catch (e) {
       console.error('[Results] Save error:', e);
     }
-    // Email is the real fallback now — the session was already saved
-    // server-side (KV) when the analysis completed. GHL's payment link
-    // success URL should be configured to redirect to:
-    //   https://app.hiregetlaunched.com?paid=true&email={{contact.email}}
+    // GHL's payment-link "Enter URL" field (in the product settings) is a
+    // static field — it does NOT resolve merge fields like {{contact.email}}.
+    // The correct mechanism is a redirectUrl param appended to the payment
+    // link itself, which GHL DOES support dynamically per visitor. Since we
+    // already know the customer's email here, we build the full return URL
+    // ourselves — no merge field, no GHL templating, needed at all.
     const emailParam = encodeURIComponent(form.email);
-    window.location.href = `${CONFIG.GHL_PAYMENT_URL}?email=${emailParam}`;
+    const returnUrl  = encodeURIComponent(
+      `https://app.hiregetlaunched.com?paid=true&email=${emailParam}`
+    );
+    window.location.href =
+      `${CONFIG.GHL_PAYMENT_URL}?email=${emailParam}&redirectUrl=${returnUrl}&redirectIn=1`;
   };
 
   return (
