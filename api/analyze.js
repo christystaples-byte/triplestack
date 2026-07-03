@@ -1,5 +1,18 @@
 const GHL_WEBHOOK_URL = "https://services.leadconnectorhq.com/hooks/H0yigYI8phxslWGsstcA/webhook-trigger/75c52928-c15b-4693-9763-1a4bb0d93194";
 
+// Flattens the 3-step launch plan into one readable text block, since GHL
+// custom fields are flat strings — this avoids needing 9 separate fields
+// per threat just for steps.
+function formatSteps(steps) {
+  return (steps || []).map(s => `${s.num}. ${s.title}\n${s.detail}`).join('\n\n');
+}
+
+// Same idea for the pricing breakdown — one field instead of four.
+function formatPricing(pricing) {
+  if (!pricing) return '';
+  return `${pricing.price} × ${pricing.quantity} = ${pricing.monthly}/month\n\nScale: ${pricing.scale}`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -136,12 +149,18 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
         threat1Title:       result.threats[0].title,
         threat1Description: result.threats[0].description,
         threat1Earning:     result.threats[0].earning,
+        threat1Steps:       formatSteps(result.threats[0].steps),
+        threat1Pricing:     formatPricing(result.threats[0].pricing),
         threat2Title:       result.threats[1].title,
         threat2Description: result.threats[1].description,
         threat2Earning:     result.threats[1].earning,
+        threat2Steps:       formatSteps(result.threats[1].steps),
+        threat2Pricing:     formatPricing(result.threats[1].pricing),
         threat3Title:       result.threats[2].title,
         threat3Description: result.threats[2].description,
         threat3Earning:     result.threats[2].earning,
+        threat3Steps:       formatSteps(result.threats[2].steps),
+        threat3Pricing:     formatPricing(result.threats[2].pricing),
         paid:               paid || false,
         tags:               paid ? 'TripleStack Lead, TripleStack Paid' : 'TripleStack Lead',
         source:             'TripleStack App',
