@@ -70,6 +70,18 @@ export async function notifyUnmatchedPayment(triedEmails, ghlEmail) {
   }
 }
 
+// Flattens the 3-step launch plan into one readable text block, since GHL
+// custom fields are flat strings — mirrors api/analyze.js so both webhook
+// call sites send the same shape.
+function formatSteps(steps) {
+  return (steps || []).map(s => `${s.num}. ${s.title}\n${s.detail}`).join('\n\n');
+}
+
+function formatPricing(pricing) {
+  if (!pricing) return '';
+  return `${pricing.price} × ${pricing.quantity} = ${pricing.monthly}/month\n\nScale: ${pricing.scale}`;
+}
+
 export async function sendToGHL(form, result, paid = false) {
   if (!CONFIG.GHL_WEBHOOK_URL) return;
 
@@ -82,12 +94,18 @@ export async function sendToGHL(form, result, paid = false) {
     threat1Title:       result.threats[0].title,
     threat1Description: result.threats[0].description,
     threat1Earning:     result.threats[0].earning,
+    threat1Steps:       formatSteps(result.threats[0].steps),
+    threat1Pricing:     formatPricing(result.threats[0].pricing),
     threat2Title:       result.threats[1].title,
     threat2Description: result.threats[1].description,
     threat2Earning:     result.threats[1].earning,
+    threat2Steps:       formatSteps(result.threats[1].steps),
+    threat2Pricing:     formatPricing(result.threats[1].pricing),
     threat3Title:       result.threats[2].title,
     threat3Description: result.threats[2].description,
     threat3Earning:     result.threats[2].earning,
+    threat3Steps:       formatSteps(result.threats[2].steps),
+    threat3Pricing:     formatPricing(result.threats[2].pricing),
     paid,
     tags:   paid ? 'TripleStack Lead, TripleStack Paid' : 'TripleStack Lead',
     source: 'TripleStack App',
