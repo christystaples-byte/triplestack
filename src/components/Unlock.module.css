@@ -109,22 +109,68 @@
   transform: translateY(-2px);
 }
 
-.dots {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+.hourglassWrap {
+  margin-top: 0.75rem;
+  display: inline-block;
 }
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--lime);
-  animation: pulse 1.2s ease-in-out infinite;
+.hourglass {
+  width: 46px;
+  height: 74px;
+  display: block;
+  transform-origin: 30px 48px;
+  animation: hgFlip 4s ease-in-out infinite;
 }
-.dot:nth-child(2) { animation-delay: 0.2s; }
-.dot:nth-child(3) { animation-delay: 0.4s; }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.3; transform: scale(0.85); }
-  50%      { opacity: 1;   transform: scale(1); }
+.hgFrame {
+  stroke: var(--lime);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  opacity: 0.9;
+}
+
+.hgSand {
+  fill: var(--lime);
+}
+.hgSandTop {
+  transform-origin: 30px 46px;
+  animation: hgDrainTop 4s ease-in-out infinite;
+}
+.hgSandBottom {
+  transform-origin: 30px 90px;
+  animation: hgFillBottom 4s ease-in-out infinite;
+}
+
+.hgStream {
+  stroke: var(--lime);
+  stroke-width: 2;
+  animation: hgStreamPulse 4s ease-in-out infinite;
+}
+
+@keyframes hgFlip {
+  0%, 44%  { transform: rotate(0deg); }
+  50%, 94% { transform: rotate(180deg); }
+  100%     { transform: rotate(360deg); }
+}
+
+@keyframes hgDrainTop {
+  0%      { transform: scaleY(1); }
+  40%     { transform: scaleY(0.06); }
+  50%     { transform: scaleY(0.06); }
+  90%     { transform: scaleY(1); }
+  100%    { transform: scaleY(1); }
+}
+
+@keyframes hgFillBottom {
+  0%      { transform: scaleY(0.06); }
+  40%     { transform: scaleY(1); }
+  50%     { transform: scaleY(1); }
+  90%     { transform: scaleY(0.06); }
+  100%    { transform: scaleY(0.06); }
+}
+
+@keyframes hgStreamPulse {
+  0%, 40%  { opacity: 0.9; }
+  45%, 95% { opacity: 0; }
+  50%, 90% { opacity: 0.9; }
+  100%     { opacity: 0.9; }
 }
