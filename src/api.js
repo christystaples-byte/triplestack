@@ -82,6 +82,17 @@ function formatPricing(pricing) {
   return `${pricing.price} × ${pricing.quantity} = ${pricing.monthly}/month\n\nScale: ${pricing.scale}`;
 }
 
+// Safety net: guarantees a string even if a field ever comes back as a
+// nested object (prevents "[object Object]" reaching the GHL email).
+function asText(value) {
+  if (typeof value === 'string') return value;
+  if (value == null) return '';
+  if (typeof value === 'object') {
+    return value.text || value.description || value.value || '';
+  }
+  return String(value);
+}
+
 export async function sendToGHL(form, result, paid = false) {
   if (!CONFIG.GHL_WEBHOOK_URL) return;
 
@@ -91,19 +102,19 @@ export async function sendToGHL(form, result, paid = false) {
     profession:         form.profession,
     expertiseType:      result.expertiseType,
     expertiseDesc:      result.expertiseDescription,
-    threat1Title:       result.threats[0].title,
-    threat1Description: result.threats[0].description,
-    threat1Earning:     result.threats[0].earning,
+    threat1Title:       asText(result.threats[0].title),
+    threat1Description: asText(result.threats[0].description),
+    threat1Earning:     asText(result.threats[0].earning),
     threat1Steps:       formatSteps(result.threats[0].steps),
     threat1Pricing:     formatPricing(result.threats[0].pricing),
-    threat2Title:       result.threats[1].title,
-    threat2Description: result.threats[1].description,
-    threat2Earning:     result.threats[1].earning,
+    threat2Title:       asText(result.threats[1].title),
+    threat2Description: asText(result.threats[1].description),
+    threat2Earning:     asText(result.threats[1].earning),
     threat2Steps:       formatSteps(result.threats[1].steps),
     threat2Pricing:     formatPricing(result.threats[1].pricing),
-    threat3Title:       result.threats[2].title,
-    threat3Description: result.threats[2].description,
-    threat3Earning:     result.threats[2].earning,
+    threat3Title:       asText(result.threats[2].title),
+    threat3Description: asText(result.threats[2].description),
+    threat3Earning:     asText(result.threats[2].earning),
     threat3Steps:       formatSteps(result.threats[2].steps),
     threat3Pricing:     formatPricing(result.threats[2].pricing),
     paid,
