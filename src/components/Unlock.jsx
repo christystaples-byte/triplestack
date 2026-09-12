@@ -67,10 +67,17 @@ export default function Unlock({ emailHint, onUnlocked, onGiveUp }) {
       <main className={styles.unlock} aria-live="polite" aria-label="Confirming your payment">
         <p className={styles.label}>Payment received</p>
         <h2 className={styles.title}>Pulling Up<br />Your Roadmap…</h2>
-        <div className={styles.dots} aria-hidden="true">
-          <span className={styles.dot} />
-          <span className={styles.dot} />
-          <span className={styles.dot} />
+        <div className={styles.hourglassWrap} aria-hidden="true">
+          <svg className={styles.hourglass} viewBox="0 0 60 96" xmlns="http://www.w3.org/2000/svg">
+            <path
+              className={styles.hgFrame}
+              d="M6,4 H54 L30,48 L54,92 H6 L30,48 Z"
+              fill="none"
+            />
+            <polygon className={`${styles.hgSand} ${styles.hgSandTop}`} points="12,10 48,10 30,46" />
+            <polygon className={`${styles.hgSand} ${styles.hgSandBottom}`} points="12,90 48,90 30,50" />
+            <line className={styles.hgStream} x1="30" y1="46" x2="30" y2="50" />
+          </svg>
         </div>
       </main>
     );
