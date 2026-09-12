@@ -13,6 +13,18 @@ function formatPricing(pricing) {
   return `${pricing.price} × ${pricing.quantity} = ${pricing.monthly}/month\n\nScale: ${pricing.scale}`;
 }
 
+// Safety net: guarantees a string even if the model ever returns a nested
+// object for a field that should be plain text (prevents "[object Object]"
+// from reaching the GHL webhook / email templates).
+function asText(value) {
+  if (typeof value === 'string') return value;
+  if (value == null) return '';
+  if (typeof value === 'object') {
+    return value.text || value.description || value.value || '';
+  }
+  return String(value);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -103,6 +115,56 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
   ]
 }`;
 
+  // Forces the shape of the response — title/description/earning must be
+  // strings and pricing must be the 4-field object, so the model can't
+  // hand back nested/malformed data the way free-text JSON parsing allowed.
+  const threatSchema = {
+    type: 'object',
+    properties: {
+      title:       { type: 'string' },
+      description: { type: 'string' },
+      earning:     { type: 'string' },
+      steps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            num:    { type: 'string' },
+            title:  { type: 'string' },
+            detail: { type: 'string' },
+          },
+          required: ['num', 'title', 'detail'],
+        },
+      },
+      pricing: {
+        type: 'object',
+        properties: {
+          price:    { type: 'string' },
+          quantity: { type: 'string' },
+          monthly:  { type: 'string' },
+          scale:    { type: 'string' },
+        },
+        required: ['price', 'quantity', 'monthly', 'scale'],
+      },
+    },
+    required: ['title', 'description', 'earning', 'steps', 'pricing'],
+  };
+
+  const outputSchema = {
+    type: 'object',
+    properties: {
+      expertiseType:        { type: 'string' },
+      expertiseDescription: { type: 'string' },
+      threats: {
+        type:     'array',
+        items:    threatSchema,
+        minItems: 3,
+        maxItems: 3,
+      },
+    },
+    required: ['expertiseType', 'expertiseDescription', 'threats'],
+  };
+
   try {
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -115,6 +177,12 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
         model:      'claude-sonnet-4-5',
         max_tokens: 2500,
         messages:   [{ role: 'user', content: prompt }],
+        tools: [{
+          name:         'generate_triple_threat',
+          description:  'Return the classified expertise type and 3 income streams in strict schema.',
+          input_schema: outputSchema,
+        }],
+        tool_choice: { type: 'tool', name: 'generate_triple_threat' },
       }),
     });
 
@@ -125,16 +193,14 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
     }
 
     const claudeData = await claudeRes.json();
-    const text  = claudeData.content?.find((b) => b.type === 'text')?.text || '';
-    const clean = text.replace(/```json|```/g, '').trim();
+    const toolUse = claudeData.content?.find((b) => b.type === 'tool_use');
 
-    let result;
-    try {
-      result = JSON.parse(clean);
-    } catch {
-      console.error('[Parse error]', clean);
+    if (!toolUse) {
+      console.error('[Parse error] No tool_use block in response', JSON.stringify(claudeData));
       return res.status(502).json({ error: 'Failed to parse AI response. Please try again.' });
     }
+
+    const result = toolUse.input;
 
     // Fire GHL webhook async — non-blocking
     fetch(GHL_WEBHOOK_URL, {
@@ -146,19 +212,19 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
         profession:         profession,
         expertiseType:      result.expertiseType,
         expertiseDesc:      result.expertiseDescription,
-        threat1Title:       result.threats[0].title,
-        threat1Description: result.threats[0].description,
-        threat1Earning:     result.threats[0].earning,
+        threat1Title:       asText(result.threats[0].title),
+        threat1Description: asText(result.threats[0].description),
+        threat1Earning:     asText(result.threats[0].earning),
         threat1Steps:       formatSteps(result.threats[0].steps),
         threat1Pricing:     formatPricing(result.threats[0].pricing),
-        threat2Title:       result.threats[1].title,
-        threat2Description: result.threats[1].description,
-        threat2Earning:     result.threats[1].earning,
+        threat2Title:       asText(result.threats[1].title),
+        threat2Description: asText(result.threats[1].description),
+        threat2Earning:     asText(result.threats[1].earning),
         threat2Steps:       formatSteps(result.threats[1].steps),
         threat2Pricing:     formatPricing(result.threats[1].pricing),
-        threat3Title:       result.threats[2].title,
-        threat3Description: result.threats[2].description,
-        threat3Earning:     result.threats[2].earning,
+        threat3Title:       asText(result.threats[2].title),
+        threat3Description: asText(result.threats[2].description),
+        threat3Earning:     asText(result.threats[2].earning),
         threat3Steps:       formatSteps(result.threats[2].steps),
         threat3Pricing:     formatPricing(result.threats[2].pricing),
         paid:               paid || false,
