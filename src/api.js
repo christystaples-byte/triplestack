@@ -96,6 +96,10 @@ function asText(value) {
 export async function sendToGHL(form, result, paid = false) {
   if (!CONFIG.GHL_WEBHOOK_URL) return;
 
+  const roadmapUrl = form.email
+    ? `${window.location.origin}?paid=true&email=${encodeURIComponent(form.email)}`
+    : '';
+
   const payload = {
     firstName:          form.name,
     email:              form.email,
@@ -117,6 +121,7 @@ export async function sendToGHL(form, result, paid = false) {
     threat3Earning:     asText(result.threats[2].earning),
     threat3Steps:       formatSteps(result.threats[2].steps),
     threat3Pricing:     formatPricing(result.threats[2].pricing),
+    roadmapUrl,
     paid,
     tags:   paid ? 'TripleStack Lead, TripleStack Paid' : 'TripleStack Lead',
     source: 'TripleStack App',
