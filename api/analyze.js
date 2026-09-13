@@ -1,4 +1,5 @@
 const GHL_WEBHOOK_URL = "https://services.leadconnectorhq.com/hooks/H0yigYI8phxslWGsstcA/webhook-trigger/75c52928-c15b-4693-9763-1a4bb0d93194";
+const APP_URL = "https://app.hiregetlaunched.com";
 
 // Flattens the 3-step launch plan into one readable text block, since GHL
 // custom fields are flat strings — this avoids needing 9 separate fields
@@ -202,6 +203,12 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
 
     const result = toolUse.input;
 
+    // Only paid submissions need a link back into the app — free leads
+    // just see Threat 1 on the page itself, nothing to send yet.
+    const roadmapUrl = email
+      ? `${APP_URL}?paid=true&email=${encodeURIComponent(email)}`
+      : '';
+
     // Fire GHL webhook async — non-blocking
     fetch(GHL_WEBHOOK_URL, {
       method:  'POST',
@@ -227,6 +234,7 @@ Respond ONLY with valid JSON in this exact format — no markdown fences, no pre
         threat3Earning:     asText(result.threats[2].earning),
         threat3Steps:       formatSteps(result.threats[2].steps),
         threat3Pricing:     formatPricing(result.threats[2].pricing),
+        roadmapUrl:         roadmapUrl,
         paid:               paid || false,
         tags:               paid ? 'TripleStack Lead, TripleStack Paid' : 'TripleStack Lead',
         source:             'TripleStack App',
