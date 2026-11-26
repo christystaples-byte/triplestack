@@ -27,7 +27,26 @@ export default function App() {
     if (params.get('paid') !== 'true') return;
 
     console.log('[App] paid=true detected');
-    const email = (params.get('email') || '').trim();
+
+    // Stripe return: confirm the payment server-side before unlocking.
+    const sessionId = params.get('session_id');
+    if (sessionId) {
+      fetch(`/api/verify-payment?session_id=${encodeURIComponent(sessionId)}`)
+        .then(r => r.json())
+        .then(v => {
+          if (v.paid) {
+            handlePaid((v.email || '').trim());
+          } else {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+        })
+        .catch(() => window.history.replaceState({}, '', window.location.pathname));
+      return;
+    }
+
+    handlePaid((params.get('email') || '').trim());
+
+    function handlePaid(email) {
 
     // Fast synchronous fallbacks — only relevant if a session ever ends up
     // encoded directly in the URL or survives in localStorage. Harmless to
@@ -72,6 +91,7 @@ export default function App() {
     window.history.replaceState({}, '', window.location.pathname);
     setUnlockEmailHint(email);
     setScreen(SCREENS.UNLOCK);
+    }
   }, []);
 
   useEffect(() => {
