@@ -8,9 +8,10 @@
 // auto-injects once you create a KV store and connect it to this project
 // (Vercel Dashboard → your project → Storage → Create Database → KV).
 
-const KV_URL   = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
-const TTL_SECONDS = 60 * 60 * 24; // 24 hours — plenty for a payment redirect
+// Reads the STORAGE_-prefixed vars (new Upstash DB) first, then falls back to the old names.
+const KV_URL   = process.env.STORAGE_KV_REST_API_URL   || process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.STORAGE_KV_REST_API_TOKEN || process.env.KV_REST_API_TOKEN;
+const TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days — customers can come back to unlock later
 
 async function kvCommand(command) {
   if (!KV_URL || !KV_TOKEN) {
