@@ -7,7 +7,7 @@ export default function Results({ data, form, paid }) {
   const { expertiseType, expertiseDescription, threats } = data;
   const [showCalendar, setShowCalendar] = useState(false);
 
-  const handleUnlock = () => {
+  const handleUnlock = async () => {
     try {
       const session = { form, result: data };
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(session))));
@@ -15,18 +15,20 @@ export default function Results({ data, form, paid }) {
     } catch (e) {
       console.error('[Results] Save error:', e);
     }
-    // GHL's payment-link "Enter URL" field (in the product settings) is a
-    // static field — it does NOT resolve merge fields like {{contact.email}}.
-    // The correct mechanism is a redirectUrl param appended to the payment
-    // link itself, which GHL DOES support dynamically per visitor. Since we
-    // already know the customer's email here, we build the full return URL
-    // ourselves — no merge field, no GHL templating, needed at all.
-    const emailParam = encodeURIComponent(form.email);
-    const returnUrl  = encodeURIComponent(
-      `https://app.hiregetlaunched.com?paid=true&email=${emailParam}`
-    );
-    window.location.href =
-      `${CONFIG.GHL_PAYMENT_URL}?email=${emailParam}&redirectUrl=${returnUrl}&redirectIn=1`;
+    // Create a Stripe Checkout Session server-side, then send the customer there.
+    try {
+      const r = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email }),
+      });
+      const resp = await r.json();
+      if (!r.ok || !resp.url) throw new Error(resp.error || 'checkout failed');
+      window.location.href = resp.url;
+    } catch (e) {
+      console.error('[Results] Checkout error:', e);
+      alert('Sorry, we could not start checkout. Please try again in a moment.');
+    }
   };
 
   return (
