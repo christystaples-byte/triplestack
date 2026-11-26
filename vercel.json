@@ -3,5 +3,8 @@
   "trailingSlash": false,
   "rewrites": [
     { "source": "/((?!api).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    { "path": "/api/session?email=keepalive@ping.local", "schedule": "0 12 * * *" }
   ]
 }
