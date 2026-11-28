@@ -19,6 +19,7 @@ export default async function handler(req, res) {
 
   const params = new URLSearchParams();
   params.set('mode', 'payment');
+  params.set('allow_promotion_codes', 'true'); // shows the "Add promotion code" box
   params.set('customer_email', email);
   params.set('line_items[0][quantity]', '1');
   params.set('line_items[0][price_data][currency]', 'usd');
