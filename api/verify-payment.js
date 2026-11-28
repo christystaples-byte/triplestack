@@ -17,7 +17,8 @@ export default async function handler(req, res) {
     });
     if (!r.ok) return res.status(404).json({ paid: false });
     const s = await r.json();
-    const paid = s.payment_status === 'paid';
+    // 'no_payment_required' = a 100%-off promo code brought the total to $0
+    const paid = s.payment_status === 'paid' || s.payment_status === 'no_payment_required';
     const email = s.metadata?.profile_email || s.customer_details?.email || s.customer_email || '';
     return res.status(200).json({ paid, email: paid ? email : '' });
   } catch (e) {
